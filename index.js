@@ -8,6 +8,7 @@ const server = Hapi.server({
 
 const init = async () => {
   try {
+    await server.register(require("./handlers/clientesHandler"));
     await server.start();
   } catch (error) {
     console.error(error);
