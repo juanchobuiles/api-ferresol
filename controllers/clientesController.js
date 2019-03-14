@@ -1,36 +1,33 @@
 const admin = require("firebase-admin");
 const path = require("path");
 const fs = require("fs");
-const csv = require("csv-parser");
+const csv = require("fast-csv");
 const db = admin.firestore();
 async function getAllClient() {
   const clientesRef = await db.collection("clientes").get();
   const clientes = clientesRef.docs.map(cliente => cliente.data());
-  console.log(clientes);
-
   return clientes;
 }
 
 async function insertUpdateClients(req, h) {
-  const csv = await readCsv();
-  console.log(csv);
-  return csv;
-  // console.log(results);
-  // return results;
-}
-
-async function readCsv() {
   const results = [];
-  fs.createReadStream("../api/uploads/terceros.csv")
-    .pipe(csv(["NIT", "SUCURSAL", "NOMBRE"]))
-    .on("data", data => results.push(data))
-    .on("end", () => console.log(results));
-
-  return results;
+  try {
+    const stream = await fs.createReadStream(path.join(__dirname, '../uploads/terceros.csv'))
+    const streamCsv = csv(
+      {
+        headers: true
+      }
+    )
+      .on("data", data => results.push(data))
+      .on('end', async () => await results.map(saveClientes))
+    stream.pipe(streamCsv);
+  } catch (error) {
+    return h.response(error).code(500);
+  }
+  return h.response('Clientes actualizados').code(201);
 }
 
 async function saveClientes(cliente) {
-  console.log(cliente);
   await db.collection("clientes").add(cliente);
 }
 
